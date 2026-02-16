@@ -1,0 +1,2568 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Aire Apartments - Energy Usage Report Generator - Dakota IT Solutions</title>
+    <script src="lib/chart.umd.js"></script>
+    <script src="lib/papaparse.min.js"></script>
+    <script src="lib/jszip.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary: #5D8C43;
+            --primary-light: #78A55A;
+            --primary-lighter: #A8D08D;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --gray-50: #f9fafb;
+            --gray-100: #f3f4f6;
+            --gray-200: #e5e7eb;
+            --gray-300: #d1d5db;
+            --gray-700: #374151;
+            --gray-900: #111827;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: #f9fafb;
+            min-height: 100vh;
+            padding: 0;
+        }
+
+        .container {
+            max-width: 1440px;
+            margin: 0 auto;
+            background: white;
+            min-height: 100vh;
+            border-left: 1px solid var(--gray-200);
+            border-right: 1px solid var(--gray-200);
+        }
+
+        .header {
+            background: white;
+            color: var(--gray-900);
+            padding: 48px 40px;
+            text-align: center;
+            border-bottom: 2px solid var(--primary);
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin-bottom: 10px;
+            letter-spacing: -0.5px;
+            color: var(--gray-900);
+        }
+
+        .header p {
+            font-size: 1.15rem;
+            color: var(--gray-700);
+            font-weight: 400;
+        }
+
+        .upload-section {
+            padding: 48px 40px;
+            background: var(--gray-50);
+            border-bottom: 1px solid var(--gray-200);
+        }
+
+        .upload-container {
+            display: flex;
+            justify-content: center;
+            gap: 30px;
+            margin-bottom: 20px;
+        }
+
+        .upload-box {
+            border: 2px dashed var(--gray-300);
+            border-radius: 16px;
+            padding: 48px;
+            text-align: center;
+            background: white;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            max-width: 600px;
+            width: 100%;
+        }
+
+        .upload-box:hover {
+            border-color: var(--primary);
+            background: var(--gray-50);
+        }
+
+        .upload-box.dragover {
+            background: #f0f7eb;
+            border-color: var(--primary);
+            border-style: solid;
+        }
+
+        .upload-box h3 {
+            color: #78A55A;
+            margin-bottom: 10px;
+            font-size: 1.3em;
+        }
+
+        .upload-box p {
+            color: #6c757d;
+            margin-bottom: 15px;
+        }
+
+        .file-input {
+            display: none;
+        }
+
+        .upload-btn {
+            background: white;
+            color: var(--primary);
+            padding: 12px 28px;
+            border: 2px solid var(--primary);
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1.05rem;
+            font-weight: 600;
+            transition: all 0.15s ease;
+        }
+
+        .upload-btn:hover {
+            background: var(--primary);
+            color: white;
+        }
+
+        .rate-input-container {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+        }
+
+        .rate-input-container label {
+            display: block;
+            font-size: 1.2em;
+            color: #495057;
+            margin-bottom: 10px;
+            font-weight: 600;
+        }
+
+        .rate-input-container input {
+            width: 200px;
+            padding: 10px;
+            font-size: 1.1em;
+            border: 1px solid var(--gray-300);
+            border-radius: 6px;
+            text-align: center;
+            transition: border-color 0.15s ease;
+        }
+
+        .rate-input-container input:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(93, 140, 67, 0.1);
+        }
+
+        .file-list {
+            background: white;
+            padding: 15px;
+            border-radius: 10px;
+            margin-top: 15px;
+        }
+
+        .file-item {
+            padding: 10px;
+            background: #f8f9fa;
+            margin-bottom: 5px;
+            border-radius: 5px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .remove-btn {
+            background: white;
+            color: var(--danger);
+            border: 1px solid var(--danger);
+            padding: 4px 10px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.85em;
+            transition: all 0.15s ease;
+        }
+
+        .remove-btn:hover {
+            background: var(--danger);
+            color: white;
+        }
+
+        .generate-btn {
+            background: white;
+            color: var(--primary);
+            padding: 14px 48px;
+            border: 2px solid var(--primary);
+            border-radius: 8px;
+            font-size: 1.15em;
+            font-weight: 600;
+            cursor: pointer;
+            margin-top: 20px;
+            transition: all 0.15s ease;
+            display: block;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .generate-btn:hover {
+            background: var(--primary);
+            color: white;
+        }
+
+        .generate-btn:disabled {
+            background: var(--gray-100);
+            color: var(--gray-300);
+            border-color: var(--gray-300);
+            cursor: not-allowed;
+        }
+
+        .report-section {
+            padding: 40px;
+            display: none;
+        }
+
+        .report-section.active {
+            display: block;
+        }
+
+        .report-header {
+            text-align: center;
+            margin-bottom: 40px;
+            padding-bottom: 20px;
+            border-bottom: 2px solid var(--gray-200);
+        }
+
+        .report-header h2 {
+            font-size: 2em;
+            color: #495057;
+            margin-bottom: 10px;
+        }
+
+        .report-meta {
+            color: #6c757d;
+            font-size: 1.1em;
+        }
+
+        .legend-box {
+            background: var(--gray-50);
+            border: 1px solid var(--gray-200);
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 30px;
+        }
+
+        .legend-box h3 {
+            color: var(--gray-700);
+            margin-bottom: 15px;
+            font-size: 1.2em;
+        }
+
+        .legend-item {
+            margin-bottom: 10px;
+            padding: 8px;
+            background: white;
+            border-radius: 5px;
+        }
+
+        .legend-item strong {
+            color: var(--gray-900);
+        }
+
+        .status-section {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .status-card {
+            background: white;
+            border: 2px solid #e9ecef;
+            border-radius: 10px;
+            padding: 20px;
+        }
+
+        .status-card.warning {
+            border-color: #ffc107;
+            background: #fff3cd;
+        }
+
+        .status-card.error {
+            border-color: #dc3545;
+            background: #f8d7da;
+        }
+
+        .status-card.success {
+            border-color: #28a745;
+            background: #d4edda;
+        }
+
+        .status-card h3 {
+            margin-bottom: 15px;
+            font-size: 1.2em;
+        }
+
+        .device-list {
+            list-style: none;
+        }
+
+        .device-item {
+            padding: 8px;
+            margin-bottom: 5px;
+            border-radius: 5px;
+            background: white;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .device-item.offline {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .device-item.online {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .charts-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            gap: 30px;
+            margin-bottom: 40px;
+        }
+
+        .chart-container {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            border: 1px solid var(--gray-200);
+        }
+
+        .chart-container h3 {
+            text-align: center;
+            color: #495057;
+            margin-bottom: 20px;
+            font-size: 1.3em;
+        }
+
+        .chart-wrapper {
+            position: relative;
+            height: 300px;
+        }
+
+        .line-chart-wrapper {
+            position: relative;
+            height: 400px;
+        }
+
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 24px;
+            background: white;
+            border: 1px solid var(--gray-200);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        .data-table th {
+            background: var(--gray-50);
+            color: var(--gray-700);
+            padding: 14px 16px;
+            text-align: left;
+            font-size: 0.85rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            border-bottom: 2px solid var(--gray-200);
+        }
+
+        .data-table td {
+            padding: 12px 16px;
+            border-bottom: 1px solid var(--gray-200);
+            font-size: 0.95rem;
+        }
+
+        .data-table tr:hover {
+            background: var(--gray-50);
+        }
+
+        .data-table tr.total-row {
+            background: var(--gray-50);
+            color: var(--gray-900);
+            font-weight: 600;
+            border-top: 2px solid var(--primary);
+        }
+
+        .data-table tr.total-row td {
+            border-bottom: none;
+            padding: 16px;
+        }
+
+        .highlight-no-data {
+            background: #fff3cd !important;
+            color: #856404 !important;
+        }
+
+        .highlight-partial-data {
+            background: #cfe2ff !important;
+            color: #084298 !important;
+        }
+
+        .status-cell {
+            font-weight: 600;
+            padding: 8px 12px !important;
+            border-radius: 4px;
+        }
+
+        .status-all {
+            background: #d4edda !important;
+        }
+
+        .status-all .status-cell {
+            color: #155724;
+        }
+
+        .status-partial {
+            background: #fff3cd !important;
+        }
+
+        .status-partial .status-cell {
+            color: #856404;
+        }
+
+        .status-none {
+            background: #f8d7da !important;
+        }
+
+        .status-none .status-cell {
+            color: #721c24;
+        }
+
+        .expandable-row {
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+        .expandable-row:hover {
+            background-color: rgba(0, 0, 0, 0.02) !important;
+        }
+
+        .expandable-row td:first-child::before {
+            content: 'â–¶ ';
+            display: inline-block;
+            transition: transform 0.2s;
+            margin-right: 5px;
+        }
+
+        .expandable-row.expanded td:first-child::before {
+            transform: rotate(90deg);
+        }
+
+        .detail-row {
+            display: none;
+            background: #f8f9fa !important;
+        }
+
+        .detail-row.visible {
+            display: table-row;
+        }
+
+        .detail-row td {
+            padding: 20px !important;
+            border-top: none !important;
+        }
+
+        .device-detail-table {
+            width: 100%;
+            background: white;
+            border-radius: 6px;
+            overflow: hidden;
+            border: 1px solid var(--gray-200);
+            margin: 0;
+        }
+
+        .device-detail-table th {
+            background: var(--gray-50);
+            color: var(--gray-700);
+            padding: 10px;
+            text-align: left;
+            font-size: 0.85em;
+            font-weight: 600;
+            border-bottom: 1px solid var(--gray-200);
+        }
+
+        .device-detail-table td {
+            padding: 10px !important;
+            border-bottom: 1px solid #e9ecef;
+            font-size: 0.9em;
+        }
+
+        .device-detail-table tr:last-child td {
+            border-bottom: none;
+        }
+
+        .uptime-bar {
+            width: 100%;
+            height: 20px;
+            background: #e9ecef;
+            border-radius: 10px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .uptime-fill {
+            height: 100%;
+            background: var(--success);
+            transition: width 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 0.8em;
+            font-weight: 600;
+        }
+
+        .uptime-fill.low {
+            background: var(--danger);
+        }
+
+        .uptime-fill.medium {
+            background: var(--warning);
+        }
+
+        .download-section {
+            text-align: center;
+            margin-top: 40px;
+            padding: 30px;
+            background: var(--gray-50);
+            border: 1px solid var(--gray-200);
+            border-radius: 8px;
+        }
+
+        .download-btn {
+            background: white;
+            color: var(--success);
+            padding: 12px 36px;
+            border: 2px solid var(--success);
+            border-radius: 8px;
+            font-size: 1.05em;
+            font-weight: 600;
+            cursor: pointer;
+            margin: 10px;
+            transition: all 0.15s ease;
+        }
+
+        .download-btn:hover {
+            background: var(--success);
+            color: white;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            display: none;
+        }
+
+        .loading.active {
+            display: block;
+        }
+
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #78A55A;
+            border-radius: 50%;
+            width: 60px;
+            height: 60px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .print-btn {
+            background: white;
+            color: var(--gray-700);
+            padding: 12px 36px;
+            border: 2px solid var(--gray-300);
+            border-radius: 8px;
+            font-size: 1.05em;
+            font-weight: 600;
+            cursor: pointer;
+            margin: 10px;
+            transition: all 0.15s ease;
+        }
+
+        .print-btn:hover {
+            background: var(--gray-700);
+            color: white;
+            border-color: var(--gray-700);
+        }
+
+        .footer {
+            text-align: center;
+            padding: 20px;
+            background: white;
+            color: #6c757d;
+            font-size: 0.9em;
+            border-top: 1px solid #e9ecef;
+        }
+
+        .footer a {
+            color: #78A55A;
+            text-decoration: none;
+        }
+
+        .footer a:hover {
+            text-decoration: underline;
+        }
+
+        .validation-section {
+            background: white;
+            padding: 25px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            border: 2px solid #e9ecef;
+        }
+
+        .validation-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 15px;
+            margin-bottom: 10px;
+        }
+
+        .validation-item {
+            display: flex;
+            align-items: center;
+            padding: 12px 15px;
+            border-radius: 8px;
+            background: #f8f9fa;
+            border: 2px solid #e9ecef;
+            transition: all 0.3s ease;
+        }
+
+        .validation-item.found {
+            background: #d4edda;
+            border-color: #28a745;
+        }
+
+        .validation-item.missing {
+            background: #f8d7da;
+            border-color: #dc3545;
+        }
+
+        .validation-icon {
+            font-size: 1.5em;
+            margin-right: 12px;
+            min-width: 30px;
+            text-align: center;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .validation-icon::before {
+            content: 'â—‹';
+            color: #6c757d;
+        }
+
+        .validation-item.found .validation-icon::before {
+            content: 'âœ“';
+            color: #28a745;
+            font-weight: bold;
+        }
+
+        .validation-item.missing .validation-icon::before {
+            content: 'âœ—';
+            color: #dc3545;
+            font-weight: bold;
+        }
+
+        .validation-text {
+            font-weight: 500;
+            color: #495057;
+        }
+
+        .validation-item.found .validation-text {
+            color: #155724;
+        }
+
+        .validation-item.missing .validation-text {
+            color: #721c24;
+        }
+
+        #validationMessage {
+            padding: 10px;
+            border-radius: 5px;
+        }
+
+        #validationMessage.success {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        #validationMessage.warning {
+            background: #fff3cd;
+            color: #856404;
+        }
+
+        @media print {
+            body {
+                background: white;
+                padding: 0;
+                margin: 0;
+            }
+            .upload-section, .download-section, .loading, .generate-btn, #generateBtn {
+                display: none !important;
+            }
+            .container {
+                box-shadow: none;
+                max-width: 100%;
+            }
+            /* CRITICAL: Force the report section to show in print even if .active isn't applied */
+            .report-section {
+                display: block !important;
+            }
+            .footer {
+                page-break-after: avoid;
+            }
+            /* Ensure tables don't break across pages badly */
+            table {
+                page-break-inside: auto;
+            }
+            tr {
+                page-break-inside: avoid;
+                page-break-after: auto;
+            }
+            thead {
+                display: table-header-group;
+            }
+            /* Hide chart canvases in print (they often render blank) */
+            canvas {
+                max-height: 300px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>âš¡ Aire Apartments - Energy Usage Report</h1>
+            <p>Professional energy analysis with device monitoring and outage tracking</p>
+        </div>
+
+        <div class="upload-section">
+            <div class="upload-container">
+                <div class="upload-box" id="dailyUploadBox">
+                    <h3>Monthly Energy Reports</h3>
+                    <p>Select ZIP file or individual CSV files (-1DAY.csv)</p>
+                    <button class="upload-btn" id="nativeOpenBtn">
+                        Select Files or ZIP
+                    </button>
+                    <div id="dailyFileList" class="file-list" style="display: none;"></div>
+                </div>
+            </div>
+
+            <div class="validation-section" id="validationSection">
+                <h3 style="color: #495057; margin-bottom: 15px; text-align: center;">ðŸ“‹ Required Documents Checklist</h3>
+                <div class="validation-grid">
+                    <div class="validation-item" id="val-general">
+                        <span class="validation-icon"></span>
+                        <span class="validation-text">General Electric (Floors 8-14)</span>
+                    </div>
+                    <div class="validation-item" id="val-ac-8-9">
+                        <span class="validation-icon"></span>
+                        <span class="validation-text">AC/Heater (Floors 8-9)</span>
+                    </div>
+                    <div class="validation-item" id="val-ac-10-11">
+                        <span class="validation-icon"></span>
+                        <span class="validation-text">AC/Heater (Floors 10-11)</span>
+                    </div>
+                    <div class="validation-item" id="val-ac-12-14">
+                        <span class="validation-icon"></span>
+                        <span class="validation-text">AC/Heater (Floors 12-14)</span>
+                    </div>
+                </div>
+                <div id="validationMessage" style="margin-top: 15px; text-align: center; font-weight: 600; color: #6c757d;">Upload monthly CSV files to begin validation</div>
+            </div>
+
+            <div class="rate-input-container">
+                <label for="rateInput">ðŸ’° Cost per kWh ($) <span style="color: #dc3545;">*</span></label>
+                <input type="number" id="rateInput" value="" step="0.001" min="0" placeholder="Enter rate (e.g., 0.132)" required>
+                <p style="color: #6c757d; font-size: 0.9em; margin-top: 5px;">Get this from your monthly Xcel invoice</p>
+            </div>
+
+            <button class="generate-btn" id="generateBtn" disabled>
+                Generate Report
+            </button>
+        </div>
+
+        <div class="loading" id="loadingSection">
+            <div class="spinner"></div>
+            <p>Processing your data... This may take a moment.</p>
+        </div>
+
+        <div class="report-section" id="reportSection">
+            <div class="report-header">
+                <h2 id="reportTitle">Energy Usage Report</h2>
+                <div class="report-meta">
+                    <p id="reportDate"></p>
+                    <p id="reportRate"></p>
+                </div>
+            </div>
+
+            <div class="legend-box">
+                <h3>ðŸ“– Report Guide</h3>
+                <div class="legend-item">
+                    <strong>Apartment:</strong> Unit number (click â–¶ to expand and see individual device details)
+                </div>
+                <div class="legend-item">
+                    <strong>PTAC Cost/kWh:</strong> Cost and usage for heating and air conditioning (PTAC devices)
+                </div>
+                <div class="legend-item">
+                    <strong>In-Unit Cost/kWh:</strong> Cost and usage for all other electrical devices (lights, appliances, etc. from end-of-hall feeds)
+                </div>
+                <div class="legend-item">
+                    <strong>Total Cost/kWh:</strong> Combined cost and usage for all devices in the apartment
+                </div>
+                <div class="legend-item">
+                    <strong>Status Indicators:</strong>
+                    <ul style="margin-top: 5px; margin-left: 20px;">
+                        <li><strong style="color: #28a745;">âœ“ All Reporting:</strong> All devices reporting consistently (â‰¥95% uptime)</li>
+                        <li><strong style="color: #ffc107;">âš  Partial:</strong> Some devices not reporting or intermittent connection (&lt;95% uptime)</li>
+                        <li><strong style="color: #ffc107;">âš  Intermittent:</strong> Devices reporting but with connectivity gaps</li>
+                        <li><strong style="color: #dc3545;">âœ— Not Reporting:</strong> No devices reporting any data</li>
+                    </ul>
+                </div>
+                <div class="legend-item">
+                    <strong>Connectivity:</strong> Percentage of time intervals where device successfully reported data (device is online and communicating)<br>
+                    <strong>Runtime:</strong> Percentage of time intervals where device was actively drawing power (device is running/in use)
+                </div>
+            </div>
+
+            <div class="charts-grid">
+                <div class="chart-container" style="width: 100%; margin-bottom: 30px;">
+                    <h3>PTAC Connectivity Over Time</h3>
+                    <div class="chart-wrapper" style="height: 400px;">
+                        <canvas id="connectivityTimeChart"></canvas>
+                    </div>
+                </div>
+                <div class="chart-container" style="width: 100%;">
+                    <h3>Device Reporting Status</h3>
+                    <div class="chart-wrapper" style="height: 350px;">
+                        <canvas id="statusPieChart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <table class="data-table" id="dataTable">
+                <thead>
+                    <tr>
+                        <th>Apartment</th>
+                        <th>PTAC Cost</th>
+                        <th>PTAC kWh</th>
+                        <th>In-Unit Cost</th>
+                        <th>In-Unit kWh</th>
+                        <th>Total Cost</th>
+                        <th>Total kWh</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody id="tableBody">
+                </tbody>
+            </table>
+
+            <div class="download-section">
+                <button class="download-btn" onclick="downloadCSV()">
+                    ðŸ“¥ Download CSV Report
+                </button>
+                <button class="print-btn" onclick="window.print()">
+                    ðŸ–¨Ã¯Â¸Â Print Report
+                </button>
+            </div>
+        </div>
+
+        <div class="footer">
+            <p>&copy; 2026 Dakota IT Solutions. All rights reserved.</p>
+            <p>Professional energy monitoring and reporting solutions</p>
+        </div>
+    </div>
+
+    <script>
+        // PTAC Serial Numbers Data
+        const ptacSerials = {
+            '0801': ['485AE0'],
+            '0803': ['6EE6C8'],
+            '0804': ['6EF3C0', 'C57928'],
+            '0806': ['48254C', '456C48'],
+            '0808': ['6FFAB8', '3FC96C'],
+            '0810': ['C64B30', '6F32B4', '3E4600'],
+            '0813': ['C64A10'],
+            '0814': ['6E9D98', '6E3AD0'],
+            '0816': ['C653A0', '474D44'],
+            '0818': ['702820'],
+            '0819': ['C594A8'],
+            '0822': ['6E09FC'],
+            '0823': ['C58208'],
+            '0824': ['48E6A0'],
+            '0826': ['3E50CC', '4637B4'],
+            '0828': ['6F122C', '4561A4', '6F12A0'],
+            '0830': ['6F10D0'],
+            '0831': ['6EF388'],
+            '0832': ['C5C148'],
+            '0833': ['C570BC'],
+            '0835': ['C5A714'],
+            '0836': ['C56840'],
+            '0837': ['C5E9D0'],
+            '0838': ['C64900'],
+            '0839': ['491788'],
+            '0840': ['C6C5D0'],
+            '0841': ['C58F80', 'C68B7C', 'C5C790'],
+            '0901': ['3E515C'],
+            '0903': ['6E19B0'],
+            '0904': ['4956AC', '48D59C', 'C6467C'],
+            '0907': ['456ED4'],
+            '0908': ['C65730', '700530'],
+            '0910': ['6F0FE8', '462F70'],
+            '0912': ['6F1BE4'],
+            '0913': ['6F3494'],
+            '0914': ['27E83C', 'E2C254'],
+            '0916': ['6EFC44'],
+            '0918': ['474B3C', 'C5B8D4', '48EE44'],
+            '0920': ['6EA0C4'],
+            '0922': ['6F133C'],
+            '0923': ['6EF97C'],
+            '0924': ['C5ADF8'],
+            '0927': ['47843C', 'C5DCA4', '465684'],
+            '0930': ['48D67C'],
+            '0931': ['C55CDC'],
+            '0932': ['454080'],
+            '0933': ['6E1C20'],
+            '0934': ['C63424'],
+            '0935': ['48D36C'],
+            '0938': ['455A40'],
+            '0939': ['6F3354'],
+            '0940': ['3E4F88'],
+            '0942': ['35E344', '4931BC'],
+            '1001': ['453148'],
+            '1003': ['C5C930'],
+            '1004': ['3E5300', '483018'],
+            '1006': ['6F155C', '3E5118'],
+            '1008': ['48CD8C', '6F3E94'],
+            '1010': ['493110', '6F0CE0', '6EAF38'],
+            '1013': ['3FC974'],
+            '1014': ['C682F4', '4823DC'],
+            '1016': ['C6A578', 'C62660'],
+            '1018': ['C63C98'],
+            '1019': ['3D411C'],
+            '1020': ['C691DC'],
+            '1021': ['6E6354'],
+            '1022': ['70145C'],
+            '1023': ['6F4AEC'],
+            '1026': ['C5A438', '6EF868'],
+            '1027': ['6F1464', 'C661F8', 'C5B0C0'],
+            '1028': ['C661F8', 'C5B0C0', '6F1464'],
+            '1029': ['C63554'],
+            '1030': ['3E54B4'],
+            '1031': ['3E51CC'],
+            '1032': ['486B28'],
+            '1033': ['3E533C'],
+            '1034': ['C610D4'],
+            '1035': ['C58388'],
+            '1036': ['C621B4'],
+            '1037': ['6E4F6C'],
+            '1038': ['3E4560'],
+            '1039': ['C62270'],
+            '1040': ['C6863C'],
+            '1042': ['3D615C', '3E51B8', '10F708'],
+            '1101': ['10FD80'],
+            '1103': ['6F1ADC'],
+            '1104': ['6EE324', 'C0D00C', '703AA8'],
+            '1107': ['119C48'],
+            '1108': ['6F2364'],
+            '1109': ['6F2618'],
+            '1110': ['10F508'],
+            '1112': ['3C6748', '10F720'],
+            '1114': ['110200', '3D6250'],
+            '1116': ['C577F8'],
+            '1118': ['483F28', 'C13858', '486340'],
+            '1120': ['6F2C70'],
+            '1121': ['E2C14?'],
+            '1123': ['6F1CD4'],
+            '1124': ['6F1D0C'],
+            '1126': ['3D6078', '10F610'],
+            '1128': ['4857A8', 'C06078', '16C25C'],
+            '1129': ['6F4A6C'],
+            '1130': ['6F2B08'],
+            '1131': ['10F7E0'],
+            '1132': ['47AC3C'],
+            '1133': ['1199AC'],
+            '1134': ['C6871C'],
+            '1135': ['6F1DD8'],
+            '1136': ['119BFC'],
+            '1137': ['6F2D2C'],
+            '1138': ['3E5190', 'C66754'],
+            '1140': ['C634B8'],
+            '1141': ['C571F0'],
+            '1142': ['C633B0'],
+            '1143': ['110304'],
+            '1201': ['110294'],
+            '1203': ['10F874'],
+            '1204': ['704854', 'C5918C'],
+            '1206': ['6F75A4', '70411C'],
+            '1208': ['6F7734', '6E323C'],
+            '1210': ['6F2E18', '6F303C', '3744C4'],
+            '1213': ['119BEC'],
+            '1214': ['3E4594', 'C63FD8'],
+            '1216': ['6F0EF0', '486030'],
+            '1218': ['6EE278'],
+            '1219': ['6F0F50'],
+            '1220': ['C59E24'],
+            '1221': ['10F498'],
+            '1222': ['3D6164'],
+            '1223': ['1102B0'],
+            '1224': ['114140'],
+            '1228': ['6F09CC', '6EFE94', '6F3384'],
+            '1229': ['6F28A8'],
+            '1230': ['6EF72C'],
+            '1231': ['10F974'],
+            '1232': ['493990'],
+            '1233': ['113F68'],
+            '1234': ['10FB30'],
+            '1235': ['3D6058'],
+            '1236': ['10FB88'],
+            '1237': ['6F182C'],
+            '1238': ['1102D8'],
+            '1239': ['119AB8'],
+            '1240': ['C74914'],
+            '1241': ['6F2FB8', 'E2FFE4', '6F1408'],
+            '1401': ['6F0F84'],
+            '1403': ['C67DB0'],
+            '1404': ['6F0474', '6F34A8', '484718'],
+            '1407': ['C68334'],
+            '1408': ['C5A73C', '6ED0C0'],
+            '1410': ['6F3888', '3E455C'],
+            '1412': ['C615A0', 'E2C27C'],
+            '1414': ['C57CA4', 'C59C3C'],
+            '1418': ['6F83E0', '6E9FF8', '6FFAC0'],
+            '1419': ['C5DEA8'],
+            '1420': ['492F04'],
+            '1421': ['492718', '6E04E4'],
+            '1423': ['464F6C'],
+            '1424': ['3E5110'],
+            '1426': ['48EBC0', '466E08'],
+            '1428': ['492250', '484498', '48569C'],
+            '1429': ['6F2C88'],
+            '1430': ['C59748'],
+            '1431': ['3E53E8'],
+            '1432': ['6F0D34', 'E2C06C'],
+            '1434': ['6E09C0'],
+            '1435': ['C673A8'],
+            '1436': ['6F33A0'],
+            '1437': ['C592F8'],
+            '1438': ['6ED5A4'],
+            '1440': ['C66D00', '4663E0'],
+            '1441': ['3E4580'],
+            '1442': ['4827A0'],
+            '1443': ['C740C8']
+        };
+
+        let dailyFilesData = [];
+        let detailedFilesData = [];
+        let processedData = null;
+        let charts = {};
+
+        // Wait for DOM to be fully loaded
+        document.addEventListener('DOMContentLoaded', function() {
+            
+            // Check if JSZip loaded
+            if (typeof JSZip === 'undefined') {
+                alert('Error: ZIP file support library did not load. Please restart the application.');
+            }
+            
+            // Native file dialog button
+            document.getElementById('nativeOpenBtn').addEventListener('click', async function() {
+                if (window.electronAPI) {
+                    const files = await window.electronAPI.openFileDialog();
+                    if (files && files.length > 0) {
+                        await handleNativeFiles(files);
+                    }
+                }
+            });
+
+            // Drag and drop handler (still works in Electron)
+            const box = document.getElementById('dailyUploadBox');
+            box.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                box.classList.add('dragover');
+            });
+            box.addEventListener('dragleave', () => {
+                box.classList.remove('dragover');
+            });
+            box.addEventListener('drop', async (e) => {
+                e.preventDefault();
+                box.classList.remove('dragover');
+                if (e.dataTransfer.files.length > 0) {
+                    await handleFileUpload(e.dataTransfer.files);
+                }
+            });
+
+            // Listen for files opened via File menu
+            if (window.electronAPI) {
+                window.electronAPI.onFilesSelected(async (files) => {
+                    await handleNativeFiles(files);
+                });
+                // Listen for CSV export from menu
+                window.electronAPI.onMenuExportCSV(() => {
+                    downloadCSV();
+                });
+            }
+            
+        }); // End DOMContentLoaded
+
+        // Handle files from native dialog (base64 buffers from main process)
+        async function handleNativeFiles(files) {
+            for (const fileInfo of files) {
+                const buffer = Uint8Array.from(atob(fileInfo.buffer), c => c.charCodeAt(0));
+                const blob = new Blob([buffer]);
+                const file = new File([blob], fileInfo.name);
+                
+                if (fileInfo.name.endsWith('.zip')) {
+                    // Show loading message
+                    const validationMsg = document.getElementById('validationMessage');
+                    validationMsg.textContent = '\u{1F4E6} Extracting ZIP file(s)...';
+                    validationMsg.style.color = '#0d6efd';
+                    await extractZipFile(file);
+                } else if (fileInfo.name.endsWith('.csv')) {
+                    if (fileInfo.name.includes('-1DAY')) {
+                        dailyFilesData.push(file);
+                    } else if (fileInfo.name.includes('-1H') || fileInfo.name.includes('-15MIN') || 
+                               fileInfo.name.includes('-1MIN') || fileInfo.name.includes('-1SEC')) {
+                        detailedFilesData.push(file);
+                    }
+                }
+            }
+            updateFileList();
+            validateRequiredFiles();
+        }
+
+
+        async function handleFileUpload(files) {
+            const fileArray = Array.from(files);
+            
+            // Check if any ZIP files
+            const hasZip = fileArray.some(f => f.name.endsWith('.zip'));
+            if (hasZip) {
+                // Show a simple loading message
+                const validationMsg = document.getElementById('validationMessage');
+                validationMsg.textContent = 'ðŸ“¦ Extracting ZIP file(s)...';
+                validationMsg.style.color = '#0d6efd';
+            }
+            
+            for (const file of fileArray) {
+                
+                // Handle ZIP files
+                if (file.name.endsWith('.zip')) {
+                    await extractZipFile(file);
+                }
+                // Handle CSV files
+                else if (file.name.endsWith('.csv')) {
+                    // Separate daily and detailed files
+                    if (file.name.includes('-1DAY')) {
+                        dailyFilesData.push(file);
+                    } else if (file.name.includes('-1H') || file.name.includes('-15MIN') || 
+                               file.name.includes('-1MIN') || file.name.includes('-1SEC')) {
+                        detailedFilesData.push(file);
+                    } else {
+                    }
+                } else {
+                }
+            }
+
+            updateFileList();
+            validateRequiredFiles();
+        }
+
+        async function extractZipFile(zipFile) {
+            try {
+                // Check if JSZip is available
+                if (typeof JSZip === 'undefined') {
+                    throw new Error('JSZip library not loaded. Please refresh the page.');
+                }
+                
+                const zip = await JSZip.loadAsync(zipFile);
+                const fileList = Object.keys(zip.files);
+                
+                let extractedCount = 0;
+                
+                for (const [filename, fileData] of Object.entries(zip.files)) {
+                    // Skip directories and non-CSV files
+                    if (fileData.dir) {
+                        continue;
+                    }
+                    
+                    if (!filename.endsWith('.csv')) {
+                        continue;
+                    }
+                    
+                    
+                    try {
+                        const blob = await fileData.async('blob');
+                        const file = new File([blob], filename, { type: 'text/csv' });
+                        
+                        // Separate daily and detailed files
+                        if (filename.includes('-1DAY')) {
+                            dailyFilesData.push(file);
+                            extractedCount++;
+                        } else if (filename.includes('-1H') || filename.includes('-15MIN') || 
+                                   filename.includes('-1MIN') || filename.includes('-1SEC')) {
+                            detailedFilesData.push(file);
+                            extractedCount++;
+                        } else {
+                        }
+                    } catch (extractError) {
+                    }
+                }
+                
+                
+                if (extractedCount === 0) {
+                    alert('Warning: No CSV files were extracted from the ZIP. Please check that your ZIP contains CSV files.');
+                }
+                
+            } catch (error) {
+                alert('Error extracting ZIP file: ' + error.message + '\n\nPlease make sure you uploaded a valid ZIP file containing CSV files.');
+            }
+        }
+
+        function updateFileList() {
+            const listElement = document.getElementById('dailyFileList');
+            const totalFiles = dailyFilesData.length + detailedFilesData.length;
+
+            if (totalFiles > 0) {
+                listElement.style.display = 'block';
+                listElement.innerHTML = '<h4 style="margin-bottom: 10px;">Uploaded Files:</h4>';
+                
+                // Show daily files
+                dailyFilesData.forEach((file, index) => {
+                    const fileItem = document.createElement('div');
+                    fileItem.className = 'file-item';
+                    fileItem.innerHTML = `
+                        <span>ðŸ“Š ${file.name}</span>
+                        <button class="remove-btn" onclick="removeFile('daily', ${index})">Remove</button>
+                    `;
+                    listElement.appendChild(fileItem);
+                });
+                
+                // Show detailed files
+                detailedFilesData.forEach((file, index) => {
+                    const fileItem = document.createElement('div');
+                    fileItem.className = 'file-item';
+                    fileItem.innerHTML = `
+                        <span>Ã°Å¸â€Â ${file.name}</span>
+                        <button class="remove-btn" onclick="removeFile('detailed', ${index})">Remove</button>
+                    `;
+                    listElement.appendChild(fileItem);
+                });
+            } else {
+                listElement.style.display = 'none';
+            }
+        }
+
+        function removeFile(type, index) {
+            const targetArray = type === 'daily' ? dailyFilesData : detailedFilesData;
+            targetArray.splice(index, 1);
+            updateFileList();
+            validateRequiredFiles();
+        }
+
+        function validateRequiredFiles() {
+            const validationSection = document.getElementById('validationSection');
+            validationSection.style.display = 'block';
+
+            if (dailyFilesData.length === 0) {
+                // Reset all to neutral state
+                ['val-general', 'val-ac-8-9', 'val-ac-10-11', 'val-ac-12-14'].forEach(id => {
+                    const element = document.getElementById(id);
+                    element.classList.remove('found', 'missing');
+                });
+                const messageDiv = document.getElementById('validationMessage');
+                messageDiv.className = '';
+                messageDiv.style.color = '#6c757d';
+                messageDiv.textContent = 'Upload monthly CSV files to begin validation';
+                return;
+            }
+
+            // Check for required file patterns
+            const fileNames = dailyFilesData.map(f => f.name);
+            
+            
+            // Required files detection
+            const requirements = {
+                'val-general': { found: false, name: 'General Electric', matchedFile: null },
+                'val-ac-8-9': { found: false, name: 'AC/Heater 8-9', matchedFile: null },
+                'val-ac-10-11': { found: false, name: 'AC/Heater 10-11', matchedFile: null },
+                'val-ac-12-14': { found: false, name: 'AC/Heater 12-14', matchedFile: null }
+            };
+
+            // Check each file against requirements
+            fileNames.forEach(fileName => {
+                const lowerName = fileName.toLowerCase();
+                
+                // Check for General Electric (must have "general" or "other" and NOT have "ac" or "heater")
+                const hasGeneral = lowerName.includes('general') || lowerName.includes('other');
+                const hasAcOrHeater = lowerName.includes('ac') || lowerName.includes('heater');
+                
+                if (hasGeneral && !hasAcOrHeater) {
+                    requirements['val-general'].found = true;
+                    requirements['val-general'].matchedFile = fileName;
+                } else {
+                }
+
+                // Check for AC/Heater files (must end with -1DAY.csv)
+                if (hasAcOrHeater && lowerName.includes('-1day')) {
+                    
+                    // Check floors 8-9 (handles both "Floor 8 - 9" and "Floor_8_-_9")
+                    const is8_9 = lowerName.includes('floor_8_-_9') || lowerName.includes('floor 8 - 9') || 
+                                  lowerName.includes('8-9') || lowerName.includes('floor 8') || lowerName.includes('floor 9');
+                    if (is8_9) {
+                        requirements['val-ac-8-9'].found = true;
+                        requirements['val-ac-8-9'].matchedFile = fileName;
+                    }
+                    
+                    // Check floors 10-11 (handles both "Floor 10 - 11" and "Floor_10_-_11")
+                    const is10_11 = lowerName.includes('floor_10_-_11') || lowerName.includes('floor 10 - 11') || 
+                                    lowerName.includes('10-11') || lowerName.includes('floor 10') || lowerName.includes('floor 11');
+                    if (is10_11) {
+                        requirements['val-ac-10-11'].found = true;
+                        requirements['val-ac-10-11'].matchedFile = fileName;
+                    }
+                    
+                    // Check floors 12-14 (handles both "Floor 12 - 14" and "Floor_12_-_14")
+                    const is12_14 = lowerName.includes('floor_12_-_14') || lowerName.includes('floor 12 - 14') ||
+                                    lowerName.includes('12-14') || lowerName.includes('floor 12') || 
+                                    lowerName.includes('floor 13') || lowerName.includes('floor 14');
+                    if (is12_14) {
+                        requirements['val-ac-12-14'].found = true;
+                        requirements['val-ac-12-14'].matchedFile = fileName;
+                    }
+                    
+                    if (!is8_9 && !is10_11 && !is12_14) {
+                    }
+                } else if (hasAcOrHeater) {
+                }
+            });
+
+            // Update UI for each requirement
+            let allFound = true;
+            let foundCount = 0;
+
+            Object.keys(requirements).forEach(id => {
+                const element = document.getElementById(id);
+                const req = requirements[id];
+                
+                if (req.found) {
+                    element.classList.remove('missing');
+                    element.classList.add('found');
+                    foundCount++;
+                } else {
+                    element.classList.remove('found');
+                    element.classList.add('missing');
+                    allFound = false;
+                }
+            });
+
+            // Update validation message
+            const messageDiv = document.getElementById('validationMessage');
+            if (allFound) {
+                messageDiv.className = 'success';
+                messageDiv.style.color = '';
+                messageDiv.textContent = 'âœ… All required documents are present!';
+            } else {
+                messageDiv.className = 'warning';
+                messageDiv.style.color = '';
+                messageDiv.textContent = `âš Ã¯Â¸Â ${foundCount} of 4 required documents found. Please upload the missing files.`;
+            }
+
+
+            // Update generate button - only enable if all requirements are met
+            updateGenerateButton(allFound);
+        }
+
+        function updateGenerateButton(validationPassed = null) {
+            const btn = document.getElementById('generateBtn');
+            
+            // If validation check is provided, use it; otherwise check if we have files
+            let shouldEnable = dailyFilesData.length > 0;
+            
+            // If we have files, check validation
+            if (shouldEnable && validationPassed !== null) {
+                shouldEnable = validationPassed;
+            }
+            
+            btn.disabled = !shouldEnable;
+            
+            // Update button text based on validation
+            if (dailyFilesData.length > 0 && !shouldEnable) {
+                btn.textContent = 'Missing Required Documents';
+            } else {
+                btn.textContent = 'Generate Report';
+            }
+        }
+
+        document.getElementById('generateBtn').addEventListener('click', generateReport);
+
+        async function generateReport() {
+            // Validate that rate is entered
+            const rateInput = document.getElementById('rateInput');
+            const rate = parseFloat(rateInput.value);
+            
+            if (!rateInput.value || isNaN(rate) || rate <= 0) {
+                alert('Please enter a valid Cost per kWh rate before generating the report.\n\nYou can find this rate on your monthly Xcel invoice.');
+                rateInput.focus();
+                return;
+            }
+            
+            document.getElementById('loadingSection').classList.add('active');
+            document.getElementById('reportSection').classList.remove('active');
+
+            await new Promise(resolve => setTimeout(resolve, 100));
+
+            try {
+                await processFiles();
+                displayReport();
+            } catch (error) {
+                alert('Error processing files: ' + error.message);
+            }
+
+            document.getElementById('loadingSection').classList.remove('active');
+        }
+
+        async function processFiles() {
+            const costPerKwh = parseFloat(document.getElementById('rateInput').value);
+            
+            const dailyData = await Promise.all(
+                dailyFilesData.map(file => parseCSVFile(file))
+            );
+
+            const detailedData = await Promise.all(
+                detailedFilesData.map(file => parseCSVFile(file))
+            );
+
+            processedData = aggregateEnergyData(dailyData, detailedData, costPerKwh);
+        }
+
+        function parseCSVFile(file) {
+            return new Promise((resolve, reject) => {
+                Papa.parse(file, {
+                    header: true,
+                    skipEmptyLines: true,
+                    complete: (results) => {
+                        resolve({ filename: file.name, data: results.data, headers: results.meta.fields });
+                    },
+                    error: (error) => reject(error)
+                });
+            });
+        }
+
+        // ============================================================
+        // APARTMENT-FIRST APPROACH
+        // Build the apartment structure from ptacSerials FIRST,
+        // then match CSV columns to known apartments/serials.
+        // This prevents serial bleed â€” only columns that resolve
+        // to a known apartment+serial pair are processed.
+        // ============================================================
+
+        // Reverse lookup: serial -> { aptNum, serialIndex }
+        const serialToApartment = {};
+        Object.entries(ptacSerials).forEach(([aptNum, serials]) => {
+            serials.forEach((serial, index) => {
+                if (serial && serial !== '?') {
+                    serialToApartment[serial.toUpperCase()] = { aptNum, serialIndex: index + 1 };
+                }
+            });
+        });
+
+        // Set of all known apartment numbers (for validation)
+        const knownApartments = new Set(Object.keys(ptacSerials));
+
+        /**
+         * Parse a CSV column header and map it to an apartment + device.
+         * Returns { aptNum, isAcHeater, deviceId } or all nulls if unrecognized.
+         *
+         * Column formats in the actual data:
+         *   PTAC (AC & Heater) files:
+         *     "0907-Mains_A (kWhs)"           â†’ apt 0907, single serial
+         *     "0908-1-Mains_A (kWhs)"          â†’ apt 0908, serial index 1
+         *     "0908-2-Mains_A (kWhs)"          â†’ apt 0908, serial index 2
+         *     "808-1-Mains_A (kWhs)"           â†’ apt 0808 (3-digit, pad to 4)
+         *     "1126 - 1-Mains_A (kWhs)"        â†’ apt 1126, serial index 1 (with spaces)
+         *     "Floor 8 - 9: ... (Former name 0803)-Mains_A (kWhs)" â†’ apt 0803 (panel gateway)
+         *   General Energy file:
+         *     "...-Other-0820 (kWhs)"          â†’ apt 0820, general energy
+         */
+        function extractApartmentNumber(header) {
+            // Skip non-data columns
+            if (header.includes('Time Bucket')) {
+                return { aptNum: null, isAcHeater: null, deviceId: null };
+            }
+
+            // Only process Mains_A and -Other- columns.
+            // Mains_B, Mains_C, Circuit_1-16 are sub-channels, not separate devices.
+            const isOtherCol = header.includes('-Other-');
+            const isMainsA = header.includes('Mains_A');
+            if (!isOtherCol && !isMainsA) {
+                return { aptNum: null, isAcHeater: null, deviceId: null };
+            }
+
+            // --- General Energy: "-Other-XXXX" columns ---
+            if (isOtherCol) {
+                const otherMatch = header.match(/-Other-(\d{3,4})\b/);
+                if (otherMatch) {
+                    const aptNum = otherMatch[1].padStart(4, '0');
+                    return { aptNum, isAcHeater: false, deviceId: null };
+                }
+                return { aptNum: null, isAcHeater: null, deviceId: null };
+            }
+
+            // --- PTAC (AC & Heater): Mains_A columns ---
+
+            // Pattern 1: "Former name XXXX" (panel gateway row)
+            const formerNameMatch = header.match(/Former name[:\s]+(\d{3,4})/i);
+            if (formerNameMatch) {
+                const aptNum = formerNameMatch[1].padStart(4, '0');
+                if (!knownApartments.has(aptNum)) {
+                    return { aptNum: null, isAcHeater: null, deviceId: null };
+                }
+                return { aptNum, isAcHeater: true, deviceId: aptNum };
+            }
+
+            // Pattern 2: "APTNUM-Mains_A" or "APTNUM - INDEX-Mains_A" or "APTNUM-INDEX-Mains_A"
+            // Handles: "0907-Mains_A", "0908-1-Mains_A", "808-1-Mains_A", "1126 - 1-Mains_A"
+            const aptMatch = header.match(/^(\d{3,4})\s*(?:-\s*(\d{1,2}))?\s*-\s*Mains_A/);
+            if (aptMatch) {
+                const aptNum = aptMatch[1].padStart(4, '0');
+                const deviceIndex = aptMatch[2] || null;
+
+                // Validate this is a known apartment
+                if (!knownApartments.has(aptNum)) {
+                    return { aptNum: null, isAcHeater: null, deviceId: null };
+                }
+
+                // Use the column index directly as the device ID
+                // e.g., "0908-1-Mains_A" â†’ deviceId = "0908-1"
+                //        "0907-Mains_A"   â†’ deviceId = "0907"
+                const deviceId = deviceIndex ? `${aptNum}-${deviceIndex}` : aptNum;
+
+                return { aptNum, isAcHeater: true, deviceId };
+            }
+
+            // No recognized pattern
+            return { aptNum: null, isAcHeater: null, deviceId: null };
+        }
+
+        function aggregateEnergyData(dailyData, detailedData, costPerKwh) {
+            const apartmentData = {};
+            const deviceTracking = {};
+            const deviceUptime = {}; // Track connectivity and runtime for each device
+            let earliestDate = null;
+            let latestDate = null;
+
+            // First pass: Process daily data for totals
+            // Use processedDailyDevices to prevent double-counting from duplicate columns across files
+            const processedDailyDevices = new Set();
+            
+            dailyData.forEach(fileData => {
+                const { data, headers, filename } = fileData;
+
+                const columnMap = {};
+                headers.forEach(header => {
+                    const { aptNum, isAcHeater, deviceId } = extractApartmentNumber(header);
+                    if (aptNum) {
+                        // Map xx27 apartments to xx28
+                        let targetAptNum = aptNum;
+                        if (aptNum.endsWith('27')) {
+                            targetAptNum = aptNum.slice(0, -2) + '28';
+                        }
+                        
+                        const key = `${targetAptNum}_${isAcHeater ? 'AC' : 'GEN'}_${deviceId || 'main'}`;
+                        
+                        // DEDUP: Skip if already processed from another file
+                        if (processedDailyDevices.has(key)) {
+                            return;
+                        }
+                        processedDailyDevices.add(key);
+                        
+                        columnMap[header] = { aptNum: targetAptNum, isAcHeater, deviceId };
+                        
+                        if (!apartmentData[targetAptNum]) {
+                            apartmentData[targetAptNum] = {
+                                acHeater: 0,
+                                general: 0,
+                                devices: {}
+                            };
+                        }
+
+                        if (!deviceTracking[key]) {
+                            deviceTracking[key] = {
+                                aptNum: targetAptNum,
+                                isAcHeater,
+                                deviceId: deviceId || 'main',
+                                hasData: false,
+                                totalKwh: 0
+                            };
+                        }
+                    }
+                });
+
+                data.forEach(row => {
+                    const timeBucketCol = headers.find(h => h.includes('Time Bucket'));
+                    if (timeBucketCol && row[timeBucketCol]) {
+                        const dateStr = row[timeBucketCol].trim().replace(/"/g, '');
+                        try {
+                            const date = new Date(dateStr);
+                            if (!earliestDate || date < earliestDate) earliestDate = date;
+                            if (!latestDate || date > latestDate) latestDate = date;
+                        } catch (e) {}
+                    }
+
+                    Object.entries(columnMap).forEach(([column, info]) => {
+                        const value = row[column]?.trim().replace(/"/g, '');
+                        if (value && value !== 'No CT' && !isNaN(value)) {
+                            const numValue = parseFloat(value);
+                            const key = `${info.aptNum}_${info.isAcHeater ? 'AC' : 'GEN'}_${info.deviceId || 'main'}`;
+                            
+                            if (info.isAcHeater) {
+                                apartmentData[info.aptNum].acHeater += numValue;
+                            } else {
+                                apartmentData[info.aptNum].general += numValue;
+                            }
+
+                            if (deviceTracking[key]) {
+                                deviceTracking[key].hasData = true;
+                                deviceTracking[key].totalKwh += numValue;
+                            }
+
+                            const deviceKey = `${info.isAcHeater ? 'AC' : 'GEN'}_${info.deviceId || 'main'}`;
+                            if (!apartmentData[info.aptNum].devices[deviceKey]) {
+                                apartmentData[info.aptNum].devices[deviceKey] = 0;
+                            }
+                            apartmentData[info.aptNum].devices[deviceKey] += numValue;
+                        }
+                    });
+                });
+            });
+
+            // Second pass: Calculate uptime from 15-MINUTE detailed data only
+            // CRITICAL FIX: Each device must only be processed from ONE file.
+            // Multiple files may contain columns for the same apartment, but only
+            // the file for that apartment's actual panel has real data.
+            // We use two strategies together:
+            //   1) Floor-to-file mapping (when panel IDs are known)
+            //   2) processedDevices Set as a universal dedup safety net
+            
+            const fifteenMinFiles = detailedData.filter(f => f.filename && f.filename.includes('-15MIN'));
+            
+            // DEDUP SET: Track which device keys have already been assigned to a file.
+            // Once a device is processed from one file, it is SKIPPED in all subsequent files.
+            const processedDeviceKeys = new Set();
+            
+            // Known panel-to-floor mappings (extend as needed for other buildings)
+            const panelFloorMap = [
+                { panelId: '10F874', minFloor: 12, maxFloor: 14 },
+                { panelId: 'C5C930', minFloor: 10, maxFloor: 11 },
+                { panelId: '6EE6C8', minFloor: 8, maxFloor: 9 },
+            ];
+
+            // Sort files so known-panel files are processed first (matched panels before unknown)
+            const sortedFifteenMinFiles = [...fifteenMinFiles].sort((a, b) => {
+                const aKnown = panelFloorMap.some(p => a.filename.includes(p.panelId));
+                const bKnown = panelFloorMap.some(p => b.filename.includes(p.panelId));
+                return (bKnown ? 1 : 0) - (aKnown ? 1 : 0);
+            });
+            
+            sortedFifteenMinFiles.forEach(fileData => {
+                const { data, headers, filename } = fileData;
+
+                // Determine which panel this file belongs to
+                const matchedPanel = panelFloorMap.find(p => filename.includes(p.panelId));
+                if (matchedPanel) {
+                } else {
+                }
+
+                const columnMap = {};
+                headers.forEach(header => {
+                    const { aptNum, isAcHeater, deviceId } = extractApartmentNumber(header);
+                    if (aptNum) {
+                        let targetAptNum = aptNum;
+                        if (aptNum.endsWith('27')) {
+                            targetAptNum = aptNum.slice(0, -2) + '28';
+                        }
+                        
+                        const key = `${targetAptNum}_${isAcHeater ? 'AC' : 'GEN'}_${deviceId || 'main'}`;
+                        
+                        // DEDUP CHECK: Skip if this device was already processed from another file
+                        if (processedDeviceKeys.has(key)) {
+                            return; // skip this header
+                        }
+                        
+                        // Floor-based filtering: if we know the panel, only accept matching floors
+                        if (matchedPanel) {
+                            const floorNum = parseInt(targetAptNum.substring(0, 2));
+                            if (floorNum < matchedPanel.minFloor || floorNum > matchedPanel.maxFloor) {
+                                return; // wrong panel for this apartment
+                            }
+                        }
+                        
+                        // This device belongs to this file â€” mark it as processed
+                        processedDeviceKeys.add(key);
+                        columnMap[header] = { aptNum: targetAptNum, isAcHeater, deviceId };
+                        
+                        if (!deviceUptime[key]) {
+                            deviceUptime[key] = {
+                                totalIntervals: 0,
+                                connectedIntervals: 0,
+                                activeIntervals: 0,
+                                aptNum: targetAptNum,
+                                isAcHeater,
+                                deviceId: deviceId || 'main'
+                            };
+                        }
+                    }
+                });
+
+
+                data.forEach(row => {
+                    Object.entries(columnMap).forEach(([column, info]) => {
+                        const key = `${info.aptNum}_${info.isAcHeater ? 'AC' : 'GEN'}_${info.deviceId || 'main'}`;
+                        const value = row[column]?.trim().replace(/"/g, '');
+                        
+                        if (deviceUptime[key]) {
+                            deviceUptime[key].totalIntervals++;
+                            
+                            const trimmedValue = value ? value.trim() : '';
+                            
+                            if (trimmedValue && trimmedValue !== 'No CT') {
+                                const numValue = parseFloat(trimmedValue);
+                                if (!isNaN(numValue) && numValue >= 0) {
+                                    deviceUptime[key].connectedIntervals++;
+                                    
+                                    if (numValue > 0) {
+                                        deviceUptime[key].activeIntervals++;
+                                    }
+                                }
+                            }
+                        }
+                    });
+                });
+            });
+
+            const outageData = processOutageData(detailedData);
+
+            const apartments = [];
+            let grandTotal = { cost: 0, kwh: 0, acCost: 0, acKwh: 0, genCost: 0, genKwh: 0 };
+
+            // First, collect all apartment data
+            const aptDataMap = {};
+            Object.keys(apartmentData).sort().forEach(aptNum => {
+                const data = apartmentData[aptNum];
+                
+                // Check if this is a xx27 apartment - if so, map it to xx28
+                let targetAptNum = aptNum;
+                if (aptNum.endsWith('27')) {
+                    targetAptNum = aptNum.slice(0, -2) + '28';
+                }
+                
+                // Initialize target apartment if it doesn't exist
+                if (!aptDataMap[targetAptNum]) {
+                    aptDataMap[targetAptNum] = {
+                        acHeater: 0,
+                        general: 0,
+                        devices: {},
+                        sourceApartments: []
+                    };
+                }
+                
+                // Combine data
+                aptDataMap[targetAptNum].acHeater += data.acHeater;
+                aptDataMap[targetAptNum].general += data.general;
+                aptDataMap[targetAptNum].sourceApartments.push(aptNum);
+                
+                // Merge devices
+                Object.entries(data.devices).forEach(([deviceKey, kwh]) => {
+                    if (!aptDataMap[targetAptNum].devices[deviceKey]) {
+                        aptDataMap[targetAptNum].devices[deviceKey] = 0;
+                    }
+                    aptDataMap[targetAptNum].devices[deviceKey] += kwh;
+                });
+            });
+
+            // Now process the combined apartment data
+            Object.keys(aptDataMap).sort().forEach(aptNum => {
+                const data = aptDataMap[aptNum];
+                const totalKwh = data.acHeater + data.general;
+                const totalCost = totalKwh * costPerKwh;
+                const acCost = data.acHeater * costPerKwh;
+                const genCost = data.general * costPerKwh;
+
+                const acDevices = Object.keys(data.devices).filter(k => k.startsWith('AC_'));
+                const genDevices = Object.keys(data.devices).filter(k => k.startsWith('GEN_'));
+                const hasMultipleDevices = acDevices.length > 1 || genDevices.length > 1;
+                const hasNoAcData = data.acHeater === 0 && acDevices.length === 0;
+                const hasNoGenData = data.general === 0 && genDevices.length === 0;
+
+                // Calculate device details with uptime
+                const deviceDetails = [];
+                
+                // Always check for both PTAC and In-Unit devices
+                const hasPTACData = data.acHeater > 0;
+                const hasInUnitData = data.general > 0;
+                
+                // Process devices that have entries in data.devices
+                Object.entries(data.devices).forEach(([deviceKey, kwh]) => {
+                    const [type, id] = deviceKey.split('_');
+                    const isAc = type === 'AC';
+                    const uptimeKey = `${aptNum}_${type}_${id}`;
+                    
+                    let connectivity = null;
+                    let runtime = null;
+                    if (deviceUptime[uptimeKey]) {
+                        const { totalIntervals, connectedIntervals, activeIntervals } = deviceUptime[uptimeKey];
+                        if (totalIntervals > 0) {
+                            connectivity = (connectedIntervals / totalIntervals * 100).toFixed(1);
+                            runtime = (activeIntervals / totalIntervals * 100).toFixed(1);
+                        }
+                    }
+
+                    deviceDetails.push({
+                        type: isAc ? 'PTAC' : 'In-Unit',
+                        deviceId: id,
+                        kwh: kwh,
+                        cost: kwh * costPerKwh,
+                        connectivity: connectivity,
+                        runtime: runtime,
+                        hasData: kwh > 0
+                    });
+                });
+                
+                // Ensure we have at least one PTAC entry if we have PTAC data but no device entry
+                const hasPTACEntry = deviceDetails.some(d => d.type === 'PTAC');
+                if (hasPTACData && !hasPTACEntry) {
+                    deviceDetails.push({
+                        type: 'PTAC',
+                        deviceId: 'main',
+                        kwh: data.acHeater,
+                        cost: acCost,
+                        connectivity: null,
+                        runtime: null,
+                        hasData: true
+                    });
+                }
+                
+                // Ensure we have at least one In-Unit entry if we have In-Unit data but no device entry
+                const hasInUnitEntry = deviceDetails.some(d => d.type === 'In-Unit');
+                if (hasInUnitData && !hasInUnitEntry) {
+                    deviceDetails.push({
+                        type: 'In-Unit',
+                        deviceId: 'main',
+                        kwh: data.general,
+                        cost: genCost,
+                        connectivity: null,
+                        runtime: null,
+                        hasData: true
+                    });
+                }
+                
+                // Add entries for missing devices (0 data)
+                if (!hasPTACData && !hasPTACEntry) {
+                    deviceDetails.push({
+                        type: 'PTAC',
+                        deviceId: 'main',
+                        kwh: 0,
+                        cost: 0,
+                        connectivity: null,
+                        runtime: null,
+                        hasData: false
+                    });
+                }
+                
+                if (!hasInUnitData && !hasInUnitEntry) {
+                    deviceDetails.push({
+                        type: 'In-Unit',
+                        deviceId: 'main',
+                        kwh: 0,
+                        cost: 0,
+                        connectivity: null,
+                        runtime: null,
+                        hasData: false
+                    });
+                }
+
+                apartments.push({
+                    aptNum,
+                    totalCost,
+                    totalKwh,
+                    acCost,
+                    acKwh: data.acHeater,
+                    genCost,
+                    genKwh: data.general,
+                    devices: data.devices,
+                    deviceDetails,
+                    hasMultipleDevices,
+                    hasNoAcData,
+                    hasNoGenData
+                });
+
+                grandTotal.cost += totalCost;
+                grandTotal.kwh += totalKwh;
+                grandTotal.acCost += acCost;
+                grandTotal.acKwh += data.acHeater;
+                grandTotal.genCost += genCost;
+                grandTotal.genKwh += data.general;
+            });
+
+            // Extract hourly PTAC connectivity data for time-based chart
+            const detailedDataForCharts = extractHourlyConnectivityData(detailedData);
+
+            return {
+                apartments,
+                grandTotal,
+                deviceTracking,
+                deviceUptime,
+                outageData,
+                dateRange: { earliest: earliestDate, latest: latestDate },
+                costPerKwh,
+                detailedDataForCharts
+            };
+        }
+
+        function extractHourlyConnectivityData(detailedData) {
+            // Find the 15-minute file for PTAC devices (more granular than hourly)
+            const fifteenMinFile = detailedData.find(f => f.filename.includes('-15MIN'));
+            if (!fifteenMinFile) return null;
+
+            const { data, headers } = fifteenMinFile;
+            const timeColumn = headers.find(h => h.includes('Time Bucket'));
+            
+            // Find all PTAC columns (Mains_A only, using extractApartmentNumber for consistency)
+            const ptacColumns = {};
+            headers.forEach(header => {
+                if (!header.includes('Mains_A')) return;
+                const { aptNum, isAcHeater } = extractApartmentNumber(header);
+                if (aptNum && isAcHeater) {
+                    // For chart data, use first column found per apartment
+                    if (!ptacColumns[aptNum]) {
+                        ptacColumns[aptNum] = header;
+                    }
+                }
+            });
+
+            // Extract 15-minute data for each PTAC
+            const intervalData = {};
+            
+            data.forEach(row => {
+                if (!row[timeColumn]) return;
+                
+                const timestamp = new Date(row[timeColumn].trim().replace(/"/g, ''));
+                if (isNaN(timestamp)) return;
+                
+                const timeKey = timestamp.getTime();
+                
+                Object.entries(ptacColumns).forEach(([aptNum, column]) => {
+                    if (!intervalData[aptNum]) {
+                        intervalData[aptNum] = [];
+                    }
+                    
+                    const value = row[column]?.trim().replace(/"/g, '');
+                    const isConnected = value && value !== 'No CT' && !isNaN(value) && parseFloat(value) >= 0;
+                    const isActive = isConnected && parseFloat(value) > 0;
+                    
+                    intervalData[aptNum].push({
+                        timestamp: timeKey,
+                        date: timestamp,
+                        connected: isConnected ? 1 : 0,
+                        active: isActive ? 1 : 0,
+                        value: isConnected ? parseFloat(value) : null
+                    });
+                });
+            });
+
+            return intervalData;
+        }
+
+        function processOutageData(detailedData) {
+            if (detailedData.length === 0) return null;
+
+            const outagesByDate = {};
+            const outagesByApartment = {};
+
+            detailedData.forEach(fileData => {
+                const { data, headers } = fileData;
+
+                const columnMap = {};
+                headers.forEach(header => {
+                    const { aptNum, isAcHeater, deviceId } = extractApartmentNumber(header);
+                    if (aptNum) {
+                        columnMap[header] = { aptNum, isAcHeater, deviceId };
+                    }
+                });
+
+                data.forEach(row => {
+                    const timeBucketCol = headers.find(h => h.includes('Time Bucket'));
+                    let date = null;
+                    
+                    if (timeBucketCol && row[timeBucketCol]) {
+                        try {
+                            date = new Date(row[timeBucketCol].trim().replace(/"/g, ''));
+                            const dateKey = date.toISOString().split('T')[0];
+                            if (!outagesByDate[dateKey]) outagesByDate[dateKey] = 0;
+                        } catch (e) {}
+                    }
+
+                    Object.entries(columnMap).forEach(([column, info]) => {
+                        const value = row[column]?.trim().replace(/"/g, '');
+                        if (value === 'No CT' || value === '' || value === '0' || isNaN(value)) {
+                            if (date) {
+                                const dateKey = date.toISOString().split('T')[0];
+                                outagesByDate[dateKey]++;
+                                
+                                if (!outagesByApartment[info.aptNum]) {
+                                    outagesByApartment[info.aptNum] = 0;
+                                }
+                                outagesByApartment[info.aptNum]++;
+                            }
+                        }
+                    });
+                });
+            });
+
+            return { outagesByDate, outagesByApartment };
+        }
+
+        function displayReport() {
+            const { apartments, grandTotal, deviceTracking, deviceUptime, outageData, dateRange, costPerKwh, detailedDataForCharts } = processedData;
+
+            if (dateRange.earliest && dateRange.latest) {
+                const formatDate = (d) => d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+                document.getElementById('reportTitle').textContent = 
+                    `Energy Usage Report - ${formatDate(dateRange.earliest)} to ${formatDate(dateRange.latest)}`;
+                document.getElementById('reportDate').textContent = 
+                    `Report Period: ${formatDate(dateRange.earliest)} to ${formatDate(dateRange.latest)}`;
+            }
+            document.getElementById('reportRate').textContent = 
+                `Rate: $${costPerKwh.toFixed(3)} per kWh`;
+
+            displayCharts(apartments, grandTotal, deviceUptime, outageData, detailedDataForCharts);
+            displayTable(apartments, grandTotal);
+
+            document.getElementById('reportSection').classList.add('active');
+            document.getElementById('reportSection').scrollIntoView({ behavior: 'smooth' });
+        }
+
+        function displayCharts(apartments, grandTotal, deviceUptime, outageData, detailedDataForCharts) {
+            Object.values(charts).forEach(chart => chart.destroy());
+            charts = {};
+
+            // Count apartments by status
+            let fullyReporting = 0;
+            let partiallyReporting = 0;
+            let notReporting = 0;
+
+            apartments.forEach(apt => {
+                if (apt.hasNoAcData && apt.hasNoGenData) {
+                    notReporting++;
+                } else if (apt.hasNoAcData || apt.hasNoGenData || apt.hasMultipleDevices) {
+                    partiallyReporting++;
+                } else {
+                    fullyReporting++;
+                }
+            });
+
+            const totalApartments = apartments.length;
+
+            // Create status pie chart
+            charts.status = new Chart(document.getElementById('statusPieChart'), {
+                type: 'pie',
+                data: {
+                    labels: [
+                        `Fully Reporting (${fullyReporting})`,
+                        `Partially Reporting (${partiallyReporting})`,
+                        `Not Reporting (${notReporting})`
+                    ],
+                    datasets: [{
+                        data: [fullyReporting, partiallyReporting, notReporting],
+                        backgroundColor: [
+                            '#28a745', // Green for fully reporting
+                            '#ffc107', // Yellow for partially reporting
+                            '#dc3545'  // Red for not reporting
+                        ],
+                        borderWidth: 2,
+                        borderColor: '#fff'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: {
+                                boxWidth: 20,
+                                padding: 15,
+                                font: {
+                                    size: 14
+                                }
+                            }
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    const count = context.parsed;
+                                    const percentage = ((count / totalApartments) * 100).toFixed(1);
+                                    return `${context.label}: ${percentage}% (${count} of ${totalApartments} apartments)`;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+
+            // Create time-based connectivity chart
+            if (detailedDataForCharts) {
+                // Calculate average connectivity across all PTACs for each hour
+                const allTimestamps = new Set();
+                Object.values(detailedDataForCharts).forEach(aptData => {
+                    aptData.forEach(point => allTimestamps.add(point.timestamp));
+                });
+
+                const timestamps = Array.from(allTimestamps).sort((a, b) => a - b);
+                const connectivityByTime = timestamps.map(ts => {
+                    let totalConnected = 0;
+                    let totalDevices = 0;
+                    
+                    Object.values(detailedDataForCharts).forEach(aptData => {
+                        const point = aptData.find(p => p.timestamp === ts);
+                        if (point) {
+                            totalConnected += point.connected;
+                            totalDevices++;
+                        }
+                    });
+                    
+                    return totalDevices > 0 ? (totalConnected / totalDevices * 100) : 0;
+                });
+
+                const labels = timestamps.map(ts => {
+                    const date = new Date(ts);
+                    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+                });
+
+                // Sample every Nth point if we have too many data points
+                const maxPoints = 100;
+                const step = Math.ceil(timestamps.length / maxPoints);
+                const sampledLabels = labels.filter((_, i) => i % step === 0);
+                const sampledData = connectivityByTime.filter((_, i) => i % step === 0);
+
+                charts.connectivity = new Chart(document.getElementById('connectivityTimeChart'), {
+                    type: 'line',
+                    data: {
+                        labels: sampledLabels,
+                        datasets: [{
+                            label: 'Average PTAC Connectivity',
+                            data: sampledData,
+                            borderColor: '#28a745',
+                            backgroundColor: 'rgba(40, 167, 69, 0.1)',
+                            borderWidth: 3,
+                            tension: 0.4,
+                            fill: true,
+                            pointRadius: 2,
+                            pointHoverRadius: 5
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        interaction: {
+                            mode: 'index',
+                            intersect: false
+                        },
+                        plugins: {
+                            legend: {
+                                display: true,
+                                position: 'top',
+                                labels: {
+                                    font: {
+                                        size: 14,
+                                        weight: 'bold'
+                                    }
+                                }
+                            },
+                            tooltip: {
+                                callbacks: {
+                                    label: function(context) {
+                                        return `Connectivity: ${context.parsed.y.toFixed(1)}%`;
+                                    }
+                                }
+                            }
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                max: 100,
+                                ticks: {
+                                    callback: function(value) {
+                                        return value + '%';
+                                    },
+                                    font: {
+                                        size: 12
+                                    }
+                                },
+                                title: {
+                                    display: true,
+                                    text: 'Connectivity Percentage',
+                                    font: {
+                                        size: 14,
+                                        weight: 'bold'
+                                    }
+                                },
+                                grid: {
+                                    color: 'rgba(0, 0, 0, 0.05)'
+                                }
+                            },
+                            x: {
+                                title: {
+                                    display: true,
+                                    text: 'Date',
+                                    font: {
+                                        size: 14,
+                                        weight: 'bold'
+                                    }
+                                },
+                                ticks: {
+                                    maxRotation: 45,
+                                    minRotation: 45,
+                                    font: {
+                                        size: 11
+                                    }
+                                },
+                                grid: {
+                                    display: false
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+        }
+
+        function displayTable(apartments, grandTotal) {
+            const tbody = document.getElementById('tableBody');
+            tbody.innerHTML = '';
+
+            apartments.forEach((apt, index) => {
+                const row = tbody.insertRow();
+                
+                // Determine status based on uptime and data
+                let status = '';
+                let statusClass = '';
+                let statusDetail = ''; // Additional detail about which device is missing
+                
+                // Count devices with data
+                const hasAnyData = apt.totalKwh > 0;
+                
+                if (!hasAnyData || (apt.hasNoAcData && apt.hasNoGenData)) {
+                    // No data at all from apartment
+                    status = 'âœ— Not Reporting';
+                    statusClass = 'status-none';
+                } else if (apt.deviceDetails && apt.deviceDetails.length > 0) {
+                    // We have device details with connectivity info
+                    const devicesWithData = apt.deviceDetails.filter(d => d.hasData);
+                    const devicesWithLowConnectivity = apt.deviceDetails.filter(d => d.connectivity !== null && parseFloat(d.connectivity) < 95 && d.hasData);
+                    
+                    if (devicesWithLowConnectivity.length > 0) {
+                        // Has data but intermittent connectivity
+                        status = 'âš  Intermittent';
+                        statusClass = 'status-partial';
+                    } else if (devicesWithData.length < 2) {
+                        // Expected 2 devices (PTAC + In-Unit) but only one is reporting
+                        status = 'âš  Partial';
+                        statusClass = 'status-partial';
+                        
+                        // Determine which device is missing
+                        const hasPTAC = devicesWithData.some(d => d.type === 'PTAC');
+                        const hasInUnit = devicesWithData.some(d => d.type === 'In-Unit');
+                        
+                        if (!hasPTAC) {
+                            statusDetail = '<br><small style="font-size: 0.85em; font-weight: 400;">Missing: PTAC</small>';
+                        } else if (!hasInUnit) {
+                            statusDetail = '<br><small style="font-size: 0.85em; font-weight: 400;">Missing: In-Unit</small>';
+                        }
+                    } else {
+                        // All devices reporting with good uptime
+                        status = 'âœ“ All Reporting';
+                        statusClass = 'status-all';
+                    }
+                } else {
+                    // No detailed uptime data, fall back to simple check
+                    if (apt.hasNoAcData && !apt.hasNoGenData) {
+                        status = 'âš  Partial';
+                        statusClass = 'status-partial';
+                        statusDetail = '<br><small style="font-size: 0.85em; font-weight: 400;">Missing: PTAC</small>';
+                    } else if (!apt.hasNoAcData && apt.hasNoGenData) {
+                        status = 'âš  Partial';
+                        statusClass = 'status-partial';
+                        statusDetail = '<br><small style="font-size: 0.85em; font-weight: 400;">Missing: In-Unit</small>';
+                    } else if (apt.hasNoAcData || apt.hasNoGenData) {
+                        status = 'âš  Partial';
+                        statusClass = 'status-partial';
+                    } else {
+                        status = 'âœ“ All Reporting';
+                        statusClass = 'status-all';
+                    }
+                }
+                
+                row.className = statusClass;
+                
+                // Make ALL rows expandable
+                row.classList.add('expandable-row');
+                row.setAttribute('data-apt', apt.aptNum);
+                
+                row.innerHTML = `
+                    <td>${apt.aptNum}</td>
+                    <td>$${apt.acCost.toFixed(2)}</td>
+                    <td>${apt.acKwh.toFixed(2)}</td>
+                    <td>$${apt.genCost.toFixed(2)}</td>
+                    <td>${apt.genKwh.toFixed(2)}</td>
+                    <td><strong>$${apt.totalCost.toFixed(2)}</strong></td>
+                    <td><strong>${apt.totalKwh.toFixed(2)}</strong></td>
+                    <td class="status-cell ${statusClass}">${status}${statusDetail}</td>
+                `;
+
+                // Add detail row for ALL apartments (even if no device details)
+                const detailRow = tbody.insertRow();
+                detailRow.className = 'detail-row';
+                detailRow.setAttribute('data-apt', apt.aptNum);
+                
+                const detailCell = detailRow.insertCell();
+                detailCell.colSpan = 8;
+                
+                let detailHTML = `
+                    <table class="device-detail-table">
+                        <thead>
+                            <tr>
+                                <th>Device Type</th>
+                                <th>Device ID</th>
+                                <th>Cost</th>
+                                <th>kWh</th>
+                                <th>Connectivity</th>
+                                <th>Runtime</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                `;
+                
+                if (apt.deviceDetails && apt.deviceDetails.length > 0) {
+                    apt.deviceDetails.forEach(device => {
+                        let connectivityHTML = '';
+                        let runtimeHTML = '';
+                        let statusIndicator = '';
+                        
+                        if (!device.hasData || device.kwh === 0) {
+                            // Device has no data - mark as not reporting
+                            connectivityHTML = '<span style="color: #dc3545; font-weight: 600;">NOT REPORTING</span>';
+                            runtimeHTML = '<span style="color: #6c757d;">-</span>';
+                            statusIndicator = ' style="background-color: #f8d7da;"';
+                        } else if (device.connectivity !== null) {
+                            // Show connectivity
+                            const connectivityPercent = parseFloat(device.connectivity);
+                            let connectivityClass = '';
+                            if (connectivityPercent >= 95) connectivityClass = '';
+                            else if (connectivityPercent >= 80) connectivityClass = 'medium';
+                            else connectivityClass = 'low';
+                            
+                            connectivityHTML = `
+                                <div class="uptime-bar">
+                                    <div class="uptime-fill ${connectivityClass}" style="width: ${connectivityPercent}%">
+                                        ${connectivityPercent}%
+                                    </div>
+                                </div>
+                            `;
+                            
+                            // Show runtime
+                            if (device.runtime !== null) {
+                                const runtimePercent = parseFloat(device.runtime);
+                                let runtimeClass = '';
+                                // Runtime coloring is different - it's about usage, not quality
+                                if (runtimePercent >= 50) runtimeClass = '';
+                                else if (runtimePercent >= 20) runtimeClass = 'medium';
+                                else runtimeClass = 'low';
+                                
+                                runtimeHTML = `
+                                    <div class="uptime-bar">
+                                        <div class="uptime-fill ${runtimeClass}" style="width: ${runtimePercent}%">
+                                            ${runtimePercent}%
+                                        </div>
+                                    </div>
+                                `;
+                            } else {
+                                runtimeHTML = '<span style="color: #6c757d;">-</span>';
+                            }
+                        } else {
+                            connectivityHTML = '<span style="color: #6c757d;">No interval data</span>';
+                            runtimeHTML = '<span style="color: #6c757d;">-</span>';
+                        }
+                        
+                        detailHTML += `
+                            <tr${statusIndicator}>
+                                <td><strong>${device.type}</strong></td>
+                                <td>${device.deviceId}</td>
+                                <td>$${device.cost.toFixed(2)}</td>
+                                <td>${device.kwh.toFixed(2)}</td>
+                                <td>${connectivityHTML}</td>
+                                <td>${runtimeHTML}</td>
+                            </tr>
+                        `;
+                    });
+                } else {
+                    // PTAC row
+                    let ptacStatusIndicator = apt.acKwh === 0 ? ' style="background-color: #f8d7da;"' : '';
+                    let ptacUptimeHTML = apt.acKwh === 0 
+                        ? '<span style="color: #dc3545; font-weight: 600;">NOT REPORTING</span>' 
+                        : '<span style="color: #6c757d;">No interval data</span>';
+                    
+                    detailHTML += `
+                        <tr${ptacStatusIndicator}>
+                            <td><strong>PTAC</strong></td>
+                            <td>-</td>
+                            <td>$${apt.acCost.toFixed(2)}</td>
+                            <td>${apt.acKwh.toFixed(2)}</td>
+                            <td>${ptacUptimeHTML}</td>
+                        </tr>
+                    `;
+                    
+                    // In-Unit row
+                    let inUnitStatusIndicator = apt.genKwh === 0 ? ' style="background-color: #f8d7da;"' : '';
+                    let inUnitUptimeHTML = apt.genKwh === 0 
+                        ? '<span style="color: #dc3545; font-weight: 600;">NOT REPORTING</span>' 
+                        : '<span style="color: #6c757d;">No interval data</span>';
+                    
+                    detailHTML += `
+                        <tr${inUnitStatusIndicator}>
+                            <td><strong>In-Unit</strong></td>
+                            <td>-</td>
+                            <td>$${apt.genCost.toFixed(2)}</td>
+                            <td>${apt.genKwh.toFixed(2)}</td>
+                            <td>${inUnitUptimeHTML}</td>
+                        </tr>
+                    `;
+                }
+                
+                detailHTML += `
+                        </tbody>
+                    </table>
+                `;
+                
+                detailCell.innerHTML = detailHTML;
+            });
+
+            const totalRow = tbody.insertRow();
+            totalRow.classList.add('total-row');
+            totalRow.innerHTML = `
+                <td>GRAND TOTAL</td>
+                <td>$${grandTotal.acCost.toFixed(2)}</td>
+                <td>${grandTotal.acKwh.toFixed(2)}</td>
+                <td>$${grandTotal.genCost.toFixed(2)}</td>
+                <td>${grandTotal.genKwh.toFixed(2)}</td>
+                <td><strong>$${grandTotal.cost.toFixed(2)}</strong></td>
+                <td><strong>${grandTotal.kwh.toFixed(2)}</strong></td>
+                <td></td>
+            `;
+
+            // Add click handlers for all expandable rows
+            document.querySelectorAll('.expandable-row').forEach(row => {
+                row.addEventListener('click', function() {
+                    const aptNum = this.getAttribute('data-apt');
+                    const detailRow = document.querySelector(`.detail-row[data-apt="${aptNum}"]`);
+                    
+                    if (detailRow) {
+                        this.classList.toggle('expanded');
+                        detailRow.classList.toggle('visible');
+                    }
+                });
+            });
+        }
+
+        async function downloadCSV() {
+            if (!processedData) {
+                alert('Please generate a report first before downloading.');
+                return;
+            }
+            const { apartments, grandTotal, dateRange, costPerKwh } = processedData;
+            
+            let csv = 'Apartment,PTAC Cost,PTAC kWh,In-Unit Cost,In-Unit kWh,Total Cost,Total kWh,Status\n';
+            
+            apartments.forEach(apt => {
+                let status = '';
+                if (apt.hasNoAcData && apt.hasNoGenData) {
+                    status = 'Not Reporting';
+                } else if (apt.hasNoAcData || apt.hasNoGenData || apt.hasMultipleDevices) {
+                    status = 'Partial';
+                } else {
+                    status = 'All Reporting';
+                }
+                
+                csv += `${apt.aptNum},${apt.acCost.toFixed(2)},${apt.acKwh.toFixed(2)},`;
+                csv += `${apt.genCost.toFixed(2)},${apt.genKwh.toFixed(2)},`;
+                csv += `${apt.totalCost.toFixed(2)},${apt.totalKwh.toFixed(2)},${status}\n`;
+            });
+
+            csv += `GRAND TOTAL,${grandTotal.acCost.toFixed(2)},${grandTotal.acKwh.toFixed(2)},`;
+            csv += `${grandTotal.genCost.toFixed(2)},${grandTotal.genKwh.toFixed(2)},`;
+            csv += `${grandTotal.cost.toFixed(2)},${grandTotal.kwh.toFixed(2)},\n`;
+            
+            csv += `\nRate per kWh: $${costPerKwh.toFixed(3)}\n`;
+            if (dateRange.earliest && dateRange.latest) {
+                csv += `Report Period: ${dateRange.earliest.toLocaleDateString()} to ${dateRange.latest.toLocaleDateString()}\n`;
+            }
+
+            let filename = 'energy_summary';
+            if (dateRange.earliest && dateRange.latest) {
+                const formatDate = (d) => d.toISOString().split('T')[0];
+                filename += `_${formatDate(dateRange.earliest)}_to_${formatDate(dateRange.latest)}`;
+            }
+            filename += '.csv';
+
+            // Use native Save As dialog in Electron
+            if (window.electronAPI) {
+                const result = await window.electronAPI.saveCSV(csv, filename);
+                if (result.success) {
+                    alert('Report saved to: ' + result.path);
+                }
+            } else {
+                // Fallback for browser
+                const blob = new Blob([csv], { type: 'text/csv' });
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = filename;
+                a.click();
+            }
+        }
+    </script>
+</body>
+</html>
