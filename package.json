@@ -5,6 +5,8 @@
   "main": "src/main.js",
   "scripts": {
     "start": "electron .",
+    "test": "jest",
+    "test:ci": "jest --ci --coverage",
     "build:win": "electron-builder --win",
     "build:mac": "electron-builder --mac",
     "build:all": "electron-builder --win --mac"
@@ -14,7 +16,8 @@
   "private": true,
   "devDependencies": {
     "electron": "^33.0.0",
-    "electron-builder": "^25.0.0"
+    "electron-builder": "^25.0.0",
+    "jest": "^29.7.0"
   },
   "dependencies": {
     "chart.js": "^4.5.1",
