@@ -33,9 +33,8 @@ jobs:
         run: npm install
 
       - name: Build installer
-        run: ${{ matrix.build_cmd }}
+        run: ${{ matrix.build_cmd }} --publish never
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           CSC_IDENTITY_AUTO_DISCOVERY: false
 
       - name: Upload artifacts
