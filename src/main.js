@@ -82,7 +82,7 @@ function createWindow() {
                             type: 'info',
                             title: 'About Aire Energy Report',
                             message: 'Aire Apartments - Energy Usage Report Generator',
-                            detail: 'Version 1.0.0\n© 2026 Dakota IT Solutions\nAll rights reserved.'
+                            detail: 'Version 1.1.0\n© 2026 Dakota IT Solutions\nAll rights reserved.'
                         });
                     }
                 }

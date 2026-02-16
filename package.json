@@ -1,6 +1,6 @@
 {
   "name": "aire-energy-report",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Aire Apartments - Energy Usage Report Generator",
   "main": "src/main.js",
   "scripts": {
