@@ -24,6 +24,7 @@
   "build": {
     "appId": "com.dakotait.aire-energy-report",
     "productName": "Aire Energy Report",
+    "publish": null,
     "directories": {
       "output": "dist"
     },
